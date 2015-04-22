@@ -1,1 +1,1 @@
-# aud_vis_dotstar
+# audio visualizer
