@@ -2,6 +2,8 @@
 //Aaron Christensen 2015
 //with acknowledgement to Ben Moyes
 
+//THIS IS THE START OF THE BIG CLEANUP
+
 //GLOBAL SET UPS
 //For spectrum analyzer shield pins
 const int spectrumReset = 5;
