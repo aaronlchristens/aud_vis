@@ -2,24 +2,15 @@
 //Aaron Christensen 2015
 //with acknowledgement to Ben Moyes
 
-//GLOBAL SET UPS
-//For spectrum analyzer shield pins
+#include <Streaming.h>
 const int spectrumReset = 5;
 const int spectrumStrobe = 4;
 int spectrumAnalog = 0; //0 for left channel, 1 for right.
-
-//Dotstar
-int head = 0;
-
-//Timing
+int head = 0; //Dotstar
 unsigned long currentMicros = 0;
 unsigned long lastRead = 0; //Last time spectrum was read; long because will be operated with currentMicros
-
-
-//Operator initialization
 byte band;
 uint8_t volume[7] = { 0, 0, 0, 0, 0, 0, 0};
-
 
 #include <Adafruit_DotStar.h>
 // Because conditional #includes don't work w/Arduino sketches...
@@ -33,10 +24,7 @@ uint8_t volume[7] = { 0, 0, 0, 0, 0, 0, 0};
 #define CLOCKPIN   13
 Adafruit_DotStar strip = Adafruit_DotStar(NUMPIXELS);//, DATAPIN, CLOCKPIN);
 
-
-
 int displayLength = int(NUMPIXELS / 7);
-
 // Hardware SPI is a little faster, but must be wired to specific pins
 // (Arduino Uno = pin 11 for data, 13 for clock, other boards are different).
 //Adafruit_DotStar strip = Adafruit_DotStar(NUMPIXELS);
@@ -45,24 +33,19 @@ void setup() {
   #if defined(__AVR_ATtiny85__) && (F_CPU == 16000000L)
   //clock_prescale_set(clock_div_1); // Enable 16 MHz on Trinket
 #endif
-
   strip.begin(); // Initialize pins for output
   strip.show();  // Turn all LEDs off ASAP
-
   startMonitor(); //Begin printing to serial monitor for debugging
-
   //Setup pins to drive the spectrum analyzer. 
   pinMode(spectrumReset, OUTPUT);
   pinMode(spectrumStrobe, OUTPUT);
-
-
   reset(); //Init spectrum analyzer
 }
 
 void loop() {
   currentMicros = micros(); //Start micros, overflows and resets to 0 every 70 minutes
   //fails after 70 minutes? --> no
-  if (currentMicros - lastRead >= 100000){ //Read ten times/second
+  if (currentMicros - lastRead >= 100000){ //Read 10 times/second
     read(); //Reads and updates leds
   }
 }
@@ -77,7 +60,7 @@ void reset(){
   digitalWrite(spectrumStrobe,LOW);
   //delay(1);
   digitalWrite(spectrumReset,LOW);
-  //delay(1);
+  //delay(5);
   // Reading the analyzer now will read the lowest frequency.
 }
 
@@ -90,30 +73,24 @@ void cycle(){
 void read(){
   lastRead = currentMicros;
   reset();
-
   for(band=0; band <7; band++){
     volume[band] = (((analogRead(0) + analogRead(1) ) / 2)/4); //Read each channel and average
-    //analog reads in voltage 0-5V or 0-1024, so divide by four to scale to one byte (0-256)
-   /*
+    //analog reads in voltage 0-5V or 0-1023, so divide by four to scale to one byte (0-255)
     if (volume[band] < 20){
       volume[band] = 0;
     }
-    */
-    printBand(band);
-    
-
+    //printBand(band);   
     updateLeds(band);
     cycle();
   }
-  Serial.println(); 
+  //Serial.println(); 
 }
 
 void startMonitor(){
-  Serial.begin(9600);
+  Serial.begin(115200);
   //Serial.write("Monitor started.");
   //Serial.println();
 }
-
 
 void printBand(int band){
   Serial.print(volume[band]);
@@ -123,7 +100,29 @@ void printBand(int band){
 void updateLeds(int band){
   head = band * displayLength;
   for (int i = head; i < head + (displayLength - 1); i++){
-    strip.setPixelColor(i, volume[band], volume[band], volume[band]);
+    switch(band){
+      case 0:
+        strip.setPixelColor(i, volume[band], 0,0);
+        Serial << band << ": " << volume[band] << 0 << " " << 0 << endl;
+      case 1:
+        strip.setPixelColor(i, volume[band], 0, 0);
+        Serial << band << ": " << volume[band] << " " << volume[band] << " 0" << endl;
+      case 2:
+        strip.setPixelColor(i, volume[band], volume[band], 0);
+        Serial << band << ": " << volume[band] << " " << volume[band] << " 0" << endl;
+      case 3:
+        strip.setPixelColor(i, volume[band]/2, volume[band], 0);
+        Serial << band << ": " << volume[band]/2 << " " << volume[band] << " 0" << endl;
+      case 4:
+        strip.setPixelColor(i, 0, volume[band], volume[band]);
+        Serial << band << ": " << "0 " << volume[band] << " " << volume[band] << endl;
+      case 5:
+        strip.setPixelColor(i, 0,0, volume[band]);
+        Serial << band << ": " << "0 " << "0 " << volume[band] << endl;
+      case 6:
+        strip.setPixelColor(i, volume[band], 0, volume[band]);
+        Serial << band << ": " << volume[band] << " 0 " << volume[band] << endl;
+    }
   }
   strip.show();
 }
