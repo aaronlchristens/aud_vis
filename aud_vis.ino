@@ -3,17 +3,6 @@
 //with acknowledgement to Ben Moyes
 
 #include <Streaming.h>
-const int spectrumReset = 5;
-const int spectrumStrobe = 4;
-int spectrumAnalog = 0; //0 for left channel, 1 for right.
-int head = 0; //Dotstar
-unsigned long currentMicros = 0;
-unsigned long lastRead = 0; //Last time spectrum was read; long because will be operated with currentMicros
-byte band;
-uint8_t volume[7] = { 0, 0, 0, 0, 0, 0, 0};
-uint8_t volumeTotal = 0;
-const uint8_t volumeMax = 1024 / 4; //1024 from each band (* 7) scaled down (/ (4 * 7)) to be one bit
-
 #include <Adafruit_DotStar.h>
 // Because conditional #includes don't work w/Arduino sketches...
 #include <SPI.h>         // COMMENT OUT THIS LINE FOR GEMMA OR TRINKET
@@ -25,6 +14,19 @@ const uint8_t volumeMax = 1024 / 4; //1024 from each band (* 7) scaled down (/ (
 #define DATAPIN    11
 #define CLOCKPIN   13
 Adafruit_DotStar strip = Adafruit_DotStar(NUMPIXELS);//, DATAPIN, CLOCKPIN);
+
+const int spectrumReset = 5;
+const int spectrumStrobe = 4;
+int spectrumAnalog = 0; //0 for left channel, 1 for right.
+int head = 0; //Dotstar
+unsigned long currentMicros = 0;
+unsigned long lastRead = 0; //Last time spectrum was read; long because will be operated with currentMicros
+byte band;
+uint8_t volume[7] = { 0, 0, 0, 0, 0, 0, 0 };
+const uint8_t volumeMax = 1023 / 4; //1024 from each band (* 7) scaled down (/ (4 * 7)) to be one bit
+const uint8_t displayLengthMax = NUMPIXELS / 2; //Displaying from midpoint outward
+uint8_t volumeTotal = 0;
+uint8_t displayLength = 0;
 
 // Hardware SPI is a little faster, but must be wired to specific pins
 // (Arduino Uno = pin 11 for data, 13 for clock, other boards are different).
@@ -46,13 +48,13 @@ void setup() {
 void loop() {
   currentMicros = micros(); //Start micros, overflows and resets to 0 every 70 minutes
   //fails after 70 minutes? --> no
-  if (currentMicros - lastRead >= 100000){ //Read 10 times/second
-    read();
+  if (currentMicros - lastRead >= 75000){ //Read 15 times/second
+    readAudio();
     updateLeds();
   }
 }
 
-void read(){
+void readAudio(){
   reset();
   volumeTotal = 0;
   for(band=0; band <7; band++){
@@ -70,8 +72,23 @@ void read(){
 }
 
 void updateLeds(){
-    for (int i = head; i < NUMPIXELS; i++){
-        strip.setPixelColor(i, volumeTotal/2, volumeTotal/2, volumeTotal/2);
+    strip.clear();
+    displayLength = (displayLengthMax * volumeTotal) / volumeMax;
+    for (int i = 61; i < NUMPIXELS; i++){
+      if (i < (displayLength + 60)){
+        strip.setPixelColor(i, 0,0,255);
+      }
+      else{
+      strip.setPixelColor(i, 0,0,10);
+      }
+    }
+    for (int i = 60; i > -1; i--){
+      if (i > (60 - displayLength)){
+        strip.setPixelColor(i, 0,0,255);
+      }
+      else{
+      strip.setPixelColor(i, 0,0,10);
+      }
     }
     strip.show();
 }
