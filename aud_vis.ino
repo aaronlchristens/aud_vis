@@ -30,9 +30,6 @@ const int spectrumStrobe = 4; // Fixed for the Sparkfun Spectrum Shield
 /*
 ***SOFTWARE VARIABLES***
 */
-// DOTSTAR
-int head = 0;
-
 // SPECTRUM SHIELD
 int spectrumAnalog = 0; // 0 for left channel, 1 for right.
 
@@ -51,10 +48,13 @@ const uint8_t volumeMax = 0; // One bit: 1024 from each band (* 7) scaled down (
 uint8_t volumeTotal = 0; // Will hold sum of volumes from each band (sum of volume array)
 
 // DISPLAY
-const uint8_t displayLengthMax = NUMPIXELS / 2; // Displaying from midpoint outward
-// ^^^ make this modifialbe for different modes
+byte mode = 0;
+uint8_t displayLengthMax = 0;
 uint8_t displayLength = 0; // Calculated display length
-
+uint32_t displayColor = 0xFF0000; // Start red
+uint8_t displayRed = 255; // Start red
+uint8_t displayGreen = 0;
+uint8_t displayBlue = 0;
 
 // Code ran initially and once when the Arduino is started
 void setup() {
@@ -83,15 +83,12 @@ void loop() {
 // Reads audio via Spectrum Shield, stores in array
 void readAudio(){
   reset();
-  volumeTotal = 0;
   for(band = 0; band < 7; band++){
     volume[band] = (((analogRead(0) + analogRead(1) ) / 2)/28); // Read each channel and average
     // Analog reads in voltage 0-5V or 0-1023, so divide by 4*7 to scale to 1/7 of a byte
     if (volume[band] < 20){ // (Try to) filter out noise
       volume[band] = 0;
     }   
-    volumeTotal += volume[band]; 
-    // ^^^ this should go somewhere else, access controlled by mode
     cycle();
 
     // MONITOR
@@ -102,25 +99,52 @@ void readAudio(){
 }
 
 void updateLeds(){
-  // ^^^ Should have mode-modulated code?
   strip.clear();
-  // if (mode)...
-  displayLength = (displayLengthMax * volumeTotal) / volumeMax; // Calculate how much to display based on volume
-  for (int i = 61; i < NUMPIXELS; i++){ // Update second half of strip
-    if (i < (displayLength + 60)){
-      strip.setPixelColor(i, 0,0,255);
-    }
-    else{
-    strip.setPixelColor(i, 0,0,10);
-    }
-  }
-  for (int i = 60; i > -1; i--){ // Update first half of strip
-    if (i > (60 - displayLength)){
-      strip.setPixelColor(i, 0,0,255);
-    }
-    else{
-    strip.setPixelColor(i, 0,0,10);
-    }
+  if (mode == 0){
+      displayLengthMax = NUMPIXELS / 2; // Displaying from midpoint outward
+      // Shift color on bass hits
+      if (volume[2] > 150){
+        /*  
+        if ((displayColor >>= 8) == 0){ // Next color (R->G->B) ... past blue now?
+              displayColor = 0xFF0000; // Yes, reset to red
+          }
+        */
+        if (displayRed == 255){
+          displayRed = 0;
+          displayGreen = 255;
+        }
+        else if (displayGreen == 255){
+          displayGreen = 0;
+          displayBlue = 255;
+        }
+        else if (displayBlue == 255){
+          displayBlue = 0;
+          displayRed = 255;
+        }
+      }
+
+      // Sum the volumes
+      volumeTotal = 0;
+      for (band = 0; band < 7; band++){
+          volumeTotal += volume[band];
+      }
+      displayLength = (displayLengthMax * volumeTotal) / volumeMax; // Calculate how much to display based on volume
+      for (int i = 61; i < NUMPIXELS; i++){ // Update second half of strip
+          if (i < (displayLength + 60)){
+              strip.setPixelColor(i, displayRed, displayGreen, displayBlue);
+          }
+          else{
+              strip.setPixelColor(i, 10, 10, 10);
+          }
+      }
+      for (int i = 60; i > -1; i--){ // Update first half of strip
+          if (i > (60 - displayLength)){
+              strip.setPixelColor(i, displayRed, displayGreen, displayBlue);
+          }
+          else{
+              strip.setPixelColor(i, 10, 10, 10);
+          }
+      }
   }
   strip.show(); // Display
 }
