@@ -72,7 +72,7 @@ void readAudio(){
 }
 
 void updateLeds(){
-    strip.clear();
+    //strip.clear(); // unneccessary? 
     displayLength = (displayLengthMax * volumeTotal) / volumeMax;
     for (int i = 61; i < NUMPIXELS; i++){
       if (i < (displayLength + 60)){
