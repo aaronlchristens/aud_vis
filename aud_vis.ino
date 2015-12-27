@@ -59,7 +59,7 @@ void readAudio(){
   volumeTotal = 0;
   for(band=0; band <7; band++){
     volume[band] = (((analogRead(0) + analogRead(1) ) / 2)/28); //Read each channel and average
-    //analog reads in voltage 0-5V or 0-1023, so divide by 4*7 to scale to 1/7 of a byte
+    //analog reads in voltage 0-5V or 0-1023 bits (4 bytes), so divide by 4*7 to scale to 1/7 of a byte (7 bands)
     if (volume[band] < 20){
       volume[band] = 0;
     }
